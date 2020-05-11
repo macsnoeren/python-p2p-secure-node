@@ -113,7 +113,7 @@ class SecureNode (Node):
             self.debug_print("_hash: " + data['_hash'])
             self.debug_print("_signature: " + data['_signature'])
 
-            return json.dumps(data, separators=(',', ':'))
+            return data # json.dumps(data, separators=(',', ':')) # The send_message accepts dict as well.
 
         except Exception as e:
             self.debug_print("Failed to create message " + str(e))
@@ -164,7 +164,7 @@ class SecureNode (Node):
     def send_message(self, message):
         """This method sends a string to all the nodes in the format {"message": message}. It uses also
            the create_message method in order to hash and sign the message as well."""
-        self.send_to_nodes(self.create_message({ "message": message }))
+        self.send_to_nodes(self.create_message({ "_type": "message", "message": message }))
 
     def get_data_uniq_string(self, data):
         """This function makes sure that a complex dict variable (consisting of other dicts and lists, 
