@@ -2,7 +2,7 @@ import sys
 import time
 sys.path.insert(0, '..')
 
-from p2pnetwork.securenode import SecureNode
+from p2psecure.securenode import SecureNode
 
 """
 Author: Maurice Snoeren
