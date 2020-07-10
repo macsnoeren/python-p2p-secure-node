@@ -18,7 +18,7 @@ Python package p2pnet for implementing decentralized peer-to-peer network applic
 """
 
 class SecureNode (Node):
-    """This class is a concrete implementation of the node class and communicates with JSON between the nodes. 
+    """This class is a concrete implementation of the Node class and communicates with JSON between the nodes. 
     It implements a secure communication between the nodes. Not that the communication is encrypted, but
     more on the tampering aspect. Messages are checked on the integrity (due to signing). A public/private
     RSA key infrastructure is used to implement this. Furthermore, it implements a basic ping/pong system and
@@ -47,40 +47,41 @@ class SecureNode (Node):
 
 
     def node_message(self, connected_node, message):
-        """node_message is overridden to provide secure communication using hashing and signing. The message that
-           is received is JSON formatted. It will be converted to a Python datastructure and the JSON is checked.
+        """node_message is overridden to provide secure communication using hashing and signing. The message has been
+           send by using a dict data structure. The NodeConnection class already converts this back to a dict structure
+           in this method. 
            The check is performed by check_message, see the documentation there. When the message is valid, it will be
            processed. The field '_type' determines the packet type. Currently the following packets are implemented:
              ping: The ping packet is send by a node to check the connection and latency.
              pong: The pong packet is the reply that is send based an a ping packet.
              discovery: The discovery packet is send to discover the connection list of a connecting node.
              discovery_answer: The answer of a node to a discovery packet that holds its list of connecting nodes."""
-        try:
-            data = json.loads(message)
-            print("node_message from " + connected_node.id + ": " + str(data))
+        #try:
+        print("node_message from " + connected_node.id + ": " + str(message))
 
-            if self.check_message(data):
-                if ( '_type' in data ):
-                    if (data['_type'] == 'ping'):
-                        self.received_ping(connected_node, data)
+        if self.check_message(message):
+            if ( '_type' in message ):
+                if (message['_type'] == 'ping'):
+                    self.received_ping(connected_node, message)
 
-                    elif (data['_type'] == 'pong'):
-                        self.received_pong(connected_node, data)
-                        
-                    elif (data['_type'] == 'discovery'):
-                        self.received_discovery(connected_node, data)
+                elif (message['_type'] == 'pong'):
+                    self.received_pong(connected_node, message)
+                    
+                elif (message['_type'] == 'discovery'):
+                    self.received_discovery(connected_node, message)
 
-                    elif (data['_type'] == 'discovery_answer'):
-                        self.received_discovery_answer(connected_node, data)
+                elif (message['_type'] == 'discovery_answer'):
+                    self.received_discovery_answer(connected_node, message)
 
-                    else:
-                        self.debug_print("node_message: message type unknown: " + connected_node.id + ": " + str(data))
+                else:
+                    self.debug_print("node_message: message type unknown: " + connected_node.id + ": " + str(message))
 
-            else:
-                print("Received message is corrupted and cannot be processed!")
+        else:
+            print("Received message is corrupted and cannot be processed!")
 
-        except Exception as e:
-            self.debug_print("NodeConnection: Data could not be parsed (%s) (%s)" % (message, str(e)))
+        #except Exception as e:
+        #    self.debug_print("SecureNode: : Data could not be parsed (%s) (%s)" % (message, str(e)))
+        #    print(e)
                
     def create_message(self, data):
         """This method creates the message based on the Python dict data variable to be sent to other nodes. Some data
@@ -88,7 +89,7 @@ class SecureNode (Node):
            message validity when a node receives it, the message is hashed and signed. The method returns a string
            of the data in JSON format, so it can be send immediatly to the node. The public key is also part of the
            communication packet."""
-        # Somehow the data is not always cleaned up!
+        # Clean up the data, to make sure we calculatie the right things!
         for el in ['_id', '_timestamp', '_message_id', '_hash', '_signature', '_public_key']:
             if ( el in data ):
                 del data[el]
@@ -113,10 +114,10 @@ class SecureNode (Node):
             self.debug_print("_hash: " + data['_hash'])
             self.debug_print("_signature: " + data['_signature'])
 
-            return data # json.dumps(data, separators=(',', ':')) # The send_message accepts dict as well.
+            return data
 
         except Exception as e:
-            self.debug_print("Failed to create message " + str(e))
+            self.debug_print("SecureNode: Failed to create message " + str(e))
 
     def check_message(self, data):
         """When a message is received it is hashed and signed by the sending node. This method checks the hash
@@ -256,7 +257,7 @@ class SecureNode (Node):
             return verifier.verify(h, signature)
 
         except Exception as e:
-            print("CRYPTO: " + str(e))
+            self.debug_print("CRYPTO: " + str(e))
 
     def verify_data(self, data, public_key, signature):
         """Verify the signature, based on the data, public key and signature. The data is converted
@@ -278,12 +279,13 @@ class SecureNode (Node):
 
     def received_ping(self, node, data):
         """With a ping message, return a pong message to the node."""
-        self.send_pong(node, data['timestamp']) # Moet weer aan!
+        self.send_pong(node, data['timestamp'])
 
     def received_pong(self, node, data):
         """Got message back based on our ping message, check the latency of the node!"""
         latency = time.time() - data['timestamp']
-        print("Received pong message with latency " + str(latency))
+        node.set_info('ping', latency)
+        self.debug_print("Received pong message with latency " + str(latency))
 
     #######################################################
     # DISCOVERY                                           #

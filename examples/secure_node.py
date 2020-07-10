@@ -1,6 +1,7 @@
 import sys
 import time
 sys.path.insert(0, '..')
+sys.path.insert(0, '../../python-p2p-network')
 
 from p2psecure.securenode import SecureNode
 
@@ -15,7 +16,7 @@ python secure_node.py <host> <port>
 python secure_node.py <port>
 """
 host = "127.0.0.1"
-port = 8000
+port = 10000
 
 if len(sys.argv) > 1:
     port = int(sys.argv[1])
@@ -33,7 +34,7 @@ time.sleep(1)
 
 running = True
 while running:
-    print("Commands: message, ping, discovery, status, connect, stop")
+    print("Commands: message, ping, discovery, status, connect, debug, stop")
     s = input("Please type a command:")
 
     if s == "stop":
@@ -50,6 +51,9 @@ while running:
 
     elif s == "status":
         node.print_connections()
+
+    elif s == "debug":
+        node.debug = not node.debug
 
     elif ( s == "connect"):
         host = input("host: ")
