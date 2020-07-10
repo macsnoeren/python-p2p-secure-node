@@ -4,6 +4,6 @@ venv/
 .idea/
 
 /dist
-/p2pnetwork*.egg-info
+*.egg-info
 /build
 /.eggs

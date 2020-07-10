@@ -1,5 +1,7 @@
 # python-p2p-secure-node
-A concrete implementation of the class Node of the p2pnetwork library. This class implement a decentralised peer-to-peer network that securely communicates between the nodes. The data is hashed and signed, so it can be checked by the other nodes. Note that the data is not encrypted. If that is needed, all the functionality is within the class methods. It is easily to extend the class. The data is in the form of dict and is send in the JSON format between the nodes.
+A concrete implementation of the class Node of the p2pnetwork framework (https://github.com/macsnoeren/python-p2p-network). This project implement a decentralised peer-to-peer network that securely communicates between the nodes. The data is hashed and signed, so it can be checked by the other nodes. Note that the data is not encrypted. If that is needed, all the functionality is within the class methods. It is easily to extend the class. The data is in the form of dict and is send in the JSON format between the nodes.
+
+It provides a decentralized secure peer-to-peer application framework p2psecure as extension on the decentralized peer-to-peer application framework p2pnetwork.
 
 # Secure communication
 Every node creates a RSA private and public key. The node exchanges the public key with the network. Each message that is send is hashed and signed by the private key. During reception, the message is decodes and checked whether the hash is correct and the signature. Only when the message integrity passes the test, it will be handled by the node.
