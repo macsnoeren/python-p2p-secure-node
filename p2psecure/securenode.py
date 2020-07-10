@@ -6,6 +6,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5 as PKCS1_v1_5_Cipher
 from Crypto.Signature import PKCS1_v1_5 as PKCS1_v1_5_Signature
 from Crypto.Hash import SHA512
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto import Random
 from base64 import b64decode, b64encode
 
 from p2pnetwork.node import Node
@@ -14,7 +17,7 @@ from p2pnetwork.node import Node
 Author : Maurice Snoeren <macsnoeren(at)gmail.com>
 Version: 0.1 beta (use at your own risk!)
 
-Python package p2pnet for implementing decentralized peer-to-peer network applications
+Python package p2pnetwork for implementing decentralized peer-to-peer network applications
 """
 
 class SecureNode (Node):
@@ -264,6 +267,66 @@ class SecureNode (Node):
            to a string, so the method verify can be used."""
         message = self.get_data_uniq_string(data)
         return self.verify(message, public_key, signature)
+
+    def encrypt_aes_pad(self, s):
+        """AES requires data to be in multiples of 16 bytes. If this is not the case, it is required
+           to add extra bytes to the data."""
+        return s + b"\0" * (AES.block_size - len(s) % AES.block_size)
+
+    def encrypt_aes(self, plaintext, key, key_size=256):
+        """Encrypt the plaintext with the given key. Make sure the key contains the required key size."""
+        plaintext = self.encrypt_aes_pad(plaintext)
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return iv + cipher.encrypt(plaintext)
+
+    def encrypt_aes_pw(self, plaintext, password):
+        """Encrypt the plaintext with the given key. Make sure the key contains the required key size."""
+        plaintext = self.encrypt_aes_pad(plaintext)
+        iv = Random.new().read(AES.block_size)
+        salt = Random.new().read(16)
+        key = PBKDF2(password, salt, 32) # 256-bit key
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return iv + salt + cipher.encrypt(plaintext) # Add both iv and salt to the cipher text
+
+    def decrypt_aes(self, ciphertext, key):
+        """Decrypt the ciphertext using the key. Return the plaintext."""
+        iv = ciphertext[:AES.block_size]
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        plaintext = cipher.decrypt(ciphertext[AES.block_size:])
+        return plaintext.rstrip(b"\0")
+
+    def decrypt_aes_pw(self, ciphertext, password):
+        """Decrypt the ciphertext using the key. Return the plaintext."""
+        iv = ciphertext[:AES.block_size]
+        salt = ciphertext[AES.block_size:AES.block_size+16] # Hardcoded 16 bits salt, maybe contant
+        key = PBKDF2(password, salt, 32) # 256-bit key
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        plaintext = cipher.decrypt(ciphertext[AES.block_size+16:])
+        return plaintext.rstrip(b"\0")
+
+        # KEY generation from password!! Need to be implemented!!
+        #salt = Random.new().read(16)
+        #keygen = PBKDF2("This passphrase is a secret.", salt, 32) # 256-bit key
+        #print("keygen: '", keygen, "'")
+
+    def encrypt_aes_file(self, file_name, plaintext, key):
+        """Encrypt the plaintext and put it into a file with file_name."""
+        enc = self.encrypt_aes(plaintext, key)
+        with open(file_name, 'wb') as fo:
+            fo.write(enc)
+
+    def decrypt_aes_file(self, file_name, key):
+        """Read a file and decrypt the content. Plaintext from the file is returned."""
+        with open(file_name, 'rb') as fo:
+            ciphertext = fo.read()
+        return self.decrypt_aes(ciphertext, key)
+
+    #######################################################
+    # Public and private key                              #
+    #######################################################
+
+
 
     #######################################################
     # PING / PONG Message packets                         #

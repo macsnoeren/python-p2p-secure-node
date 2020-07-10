@@ -9,8 +9,8 @@ from p2psecure.securenode import SecureNode
 Author: Maurice Snoeren
 Version: 0.1 beta (use at your own risk)
 
-This example uses the SecureNode to implement a node and the functionality of this security node. The class
-SecureNode is provided by the p2pnet package as well.
+This commandline application implements the secure node using the SecureNode
+class.
 
 python secure_node.py <host> <port>
 python secure_node.py <port>
