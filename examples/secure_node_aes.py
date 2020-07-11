@@ -7,10 +7,10 @@ from p2psecure.securenode import SecureNode
 node1 = SecureNode("localhost", 10001)
 
 plaintext = b"Hoi daar!"
-ciphertext = node1.encrypt_aes(plaintext, b"this is the key1")
+ciphertext = node1.encrypt_aes_pw(plaintext, b"this is the passwd")
 
-print(plaintext)
-print(ciphertext)
-print(node1.decrypt_aes(ciphertext, b"this is the key1"))
+print("PLAIN: ", plaintext)
+print("CIPHER: ", ciphertext)
+print(node1.decrypt_aes_pw(ciphertext, b"this is the passwd"))
 
 print("End")

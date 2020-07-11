@@ -286,6 +286,8 @@ class SecureNode (Node):
         iv = Random.new().read(AES.block_size)
         salt = Random.new().read(16)
         key = PBKDF2(password, salt, 32) # 256-bit key
+        print("E SALT: ", salt)
+        print("E KEY: ", key)
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return iv + salt + cipher.encrypt(plaintext) # Add both iv and salt to the cipher text
 
@@ -301,6 +303,8 @@ class SecureNode (Node):
         iv = ciphertext[:AES.block_size]
         salt = ciphertext[AES.block_size:AES.block_size+16] # Hardcoded 16 bits salt, maybe contant
         key = PBKDF2(password, salt, 32) # 256-bit key
+        print("D SALT: ", salt)
+        print("D KEY: ", key)
         cipher = AES.new(key, AES.MODE_CBC, iv)
         plaintext = cipher.decrypt(ciphertext[AES.block_size+16:])
         return plaintext.rstrip(b"\0")
