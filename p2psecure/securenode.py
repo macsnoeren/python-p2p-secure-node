@@ -353,7 +353,7 @@ class SecureNode (Node):
     #######################################################
 
     def key_pair_generate (self):
-        self.rsa_key = RSA.generate(1024)#4096)
+        self.rsa_key = RSA.generate(4096)
 
     def key_pair_save (self, file_name, password):
         try:
