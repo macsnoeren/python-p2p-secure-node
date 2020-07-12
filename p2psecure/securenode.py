@@ -15,9 +15,11 @@ from p2pnetwork.node import Node
 
 """
 Author : Maurice Snoeren <macsnoeren(at)gmail.com>
-Version: 0.1 beta (use at your own risk!)
+Version: 0.2 beta (use at your own risk!)
 
-Python package p2pnetwork for implementing decentralized peer-to-peer network applications
+Python package p2psecure for implementing secure decentralized peer-to-peer network applications based
+on the package p2pnetwork that provides a framework to create decentralized peer-to-peer network
+applications with.
 """
 
 class SecureNode (Node):
@@ -30,7 +32,11 @@ class SecureNode (Node):
     
     Instantiates a SecureNode that extends the Node class by secure functionality.
       host: The host name or ip address that is used to bind the TCP/IP server to.
-      port: The port number that is used to bind the TCP/IP server to."""
+      port: The port number that is used to bind the TCP/IP server to.
+      
+    After instantiation, you nee to load or generate a public/private key for this node to be able to send and/or
+    connect to the decentralized peer-to-peer network. This secure node is packed with all kinds of hasing and
+    encryption algorithms."""
 
     # Python class constructor
     def __init__(self, host, port):
@@ -44,10 +50,7 @@ class SecureNode (Node):
         self.discovery_messages = {}
 
         # The RSA public/private key from this node
-        # TODO: Get it from a file from the outside, well protected!!
-        # TODO: Maybe with password protection from the user that starts the node?!
-        self.rsa_key = RSA.generate(2048)
-
+        self.rsa_key = None
 
     def node_message(self, connected_node, message):
         """node_message is overridden to provide secure communication using hashing and signing. The message has been
@@ -81,10 +84,6 @@ class SecureNode (Node):
 
         else:
             print("Received message is corrupted and cannot be processed!")
-
-        #except Exception as e:
-        #    self.debug_print("SecureNode: : Data could not be parsed (%s) (%s)" % (message, str(e)))
-        #    print(e)
                
     def create_message(self, data):
         """This method creates the message based on the Python dict data variable to be sent to other nodes. Some data
@@ -92,8 +91,7 @@ class SecureNode (Node):
            message validity when a node receives it, the message is hashed and signed. The method returns a string
            of the data in JSON format, so it can be send immediatly to the node. The public key is also part of the
            communication packet."""
-        # Clean up the data, to make sure we calculatie the right things!
-        for el in ['_id', '_timestamp', '_message_id', '_hash', '_signature', '_public_key']:
+        for el in ['_id', '_timestamp', '_message_id', '_hash', '_signature', '_public_key']: # Clean up the data, to make sure we calculatie the right things!
             if ( el in data ):
                 del data[el]
 
@@ -116,6 +114,7 @@ class SecureNode (Node):
 
             self.debug_print("_hash: " + data['_hash'])
             self.debug_print("_signature: " + data['_signature'])
+            self.debug_print("_public_key: " + data['_public_key'])
 
             return data
 
@@ -268,7 +267,7 @@ class SecureNode (Node):
             return verifier.verify(h, signature)
 
         except Exception as e:
-            self.debug_print("CRYPTO: " + str(e))
+            self.debug_print("verify: " + str(e))
 
     def verify_data(self, data, public_key, signature):
         """Verify the signature, based on the data, public key and signature. The data is converted
@@ -350,10 +349,30 @@ class SecureNode (Node):
         return self.decrypt_aes_pw(ciphertext, password)
 
     #######################################################
-    # Public and private key                              #
+    # Public and private key storage and retrieval        #
     #######################################################
 
+    def key_pair_generate (self):
+        self.rsa_key = RSA.generate(1024)#4096)
 
+    def key_pair_save (self, file_name, password):
+        try:
+            key_string = self.rsa_key.exportKey('PEM', password)
+            key_string = self.encrypt_aes_pw(key_string, password)
+            with open(file_name, 'wb') as fo:
+                fo.write(key_string)
+
+        except Exception as e:
+            self.debug_print("key_pair_generate: " + str(e))
+
+    def key_pair_load (self, file_name, password):
+        try:
+            with open(file_name, 'rb') as fo:
+                key_string = self.decrypt_aes_pw(fo.read(), password)
+                self.rsa_key = RSA.importKey(key_string, password)
+
+        except Exception as e:
+            self.debug_print("key_pair_generate: " + str(e))
 
     #######################################################
     # PING / PONG Message packets                         #
