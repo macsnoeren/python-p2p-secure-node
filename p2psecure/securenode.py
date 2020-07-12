@@ -12,6 +12,7 @@ from Crypto import Random
 from base64 import b64decode, b64encode
 
 from p2pnetwork.node import Node
+from p2psecure.blockchain import Blockchain
 
 """
 Author : Maurice Snoeren <macsnoeren(at)gmail.com>
@@ -51,6 +52,8 @@ class SecureNode (Node):
 
         # The RSA public/private key from this node
         self.rsa_key = None
+
+        self.blockchain = Blockchain()
 
     def node_message(self, connected_node, message):
         """node_message is overridden to provide secure communication using hashing and signing. The message has been
