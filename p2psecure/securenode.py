@@ -170,12 +170,16 @@ class SecureNode (Node):
            the create_message method in order to hash and sign the message as well."""
         self.send_to_nodes(self.create_message({ "_type": "message", "message": message }))
 
+    #######################################################
+    # Hashing of Python variables methods                 #
+    #######################################################
+
     def get_data_uniq_string(self, data):
         """This function makes sure that a complex dict variable (consisting of other dicts and lists, 
            is converted to a unique string that can be hashed. Every data object that contains the same
            values, should result into the dame unique string."""
         return json.dumps(data, sort_keys=True)
-        
+
     def get_hash(self, data):
         """Returns the hased version of the data dict. The dict can contain lists and dicts, but it must
            be based as dict."""
@@ -194,6 +198,10 @@ class SecureNode (Node):
 
         except Exception as e:
             print("Failed to hash the message: " + str(e))
+
+    #######################################################
+    # RSA En-Decryption methods                           #
+    #######################################################
 
     def get_public_key(self):
         """Return the public key that is generated or loaded for this node."""
@@ -268,6 +276,18 @@ class SecureNode (Node):
         message = self.get_data_uniq_string(data)
         return self.verify(message, public_key, signature)
 
+    #######################################################
+    # AES En-Decryption methods                           #
+    #######################################################
+
+    def encryption_key_from_password(self, salt, password, total_bytes_key):
+        """Creates a key to be used for encryption, based on PBKDF version 2, and returns the key.
+        It uses a salt to make sure it is really unguessable."""
+        key = PBKDF2(password, salt, total_bytes_key)
+        self.debug_print("encryption_key_from_password salt: " + str(salt))
+        self.debug_print("encryption_key_from_password  key: " + str(key))
+        return key
+
     def encrypt_aes_pad(self, s):
         """AES requires data to be in multiples of 16 bytes. If this is not the case, it is required
            to add extra bytes to the data."""
@@ -285,9 +305,7 @@ class SecureNode (Node):
         plaintext = self.encrypt_aes_pad(plaintext)
         iv = Random.new().read(AES.block_size)
         salt = Random.new().read(16)
-        key = PBKDF2(password, salt, 32) # 256-bit key
-        print("E SALT: ", salt)
-        print("E KEY: ", key)
+        key = self.encryption_key_from_password(salt, password, 32) # 256-bit key
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return iv + salt + cipher.encrypt(plaintext) # Add both iv and salt to the cipher text
 
@@ -302,17 +320,10 @@ class SecureNode (Node):
         """Decrypt the ciphertext using the key. Return the plaintext."""
         iv = ciphertext[:AES.block_size]
         salt = ciphertext[AES.block_size:AES.block_size+16] # Hardcoded 16 bits salt, maybe contant
-        key = PBKDF2(password, salt, 32) # 256-bit key
-        print("D SALT: ", salt)
-        print("D KEY: ", key)
+        key = self.encryption_key_from_password(salt, password, 32) # 256-bit key
         cipher = AES.new(key, AES.MODE_CBC, iv)
         plaintext = cipher.decrypt(ciphertext[AES.block_size+16:])
         return plaintext.rstrip(b"\0")
-
-        # KEY generation from password!! Need to be implemented!!
-        #salt = Random.new().read(16)
-        #keygen = PBKDF2("This passphrase is a secret.", salt, 32) # 256-bit key
-        #print("keygen: '", keygen, "'")
 
     def encrypt_aes_file(self, file_name, plaintext, key):
         """Encrypt the plaintext and put it into a file with file_name."""
@@ -325,6 +336,18 @@ class SecureNode (Node):
         with open(file_name, 'rb') as fo:
             ciphertext = fo.read()
         return self.decrypt_aes(ciphertext, key)
+
+    def encrypt_aes_file_pw(self, file_name, plaintext, password):
+        """Encrypt the plaintext and put it into a file with file_name using a password."""
+        enc = self.encrypt_aes_pw(plaintext, password)
+        with open(file_name, 'wb') as fo:
+            fo.write(enc)
+
+    def decrypt_aes_file_pw(self, file_name, password):
+        """Read a file and decrypt the content using a password. Plaintext from the file is returned."""
+        with open(file_name, 'rb') as fo:
+            ciphertext = fo.read()
+        return self.decrypt_aes_pw(ciphertext, password)
 
     #######################################################
     # Public and private key                              #
