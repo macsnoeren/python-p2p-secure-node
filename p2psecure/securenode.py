@@ -302,11 +302,9 @@ class SecureNode (Node):
     def encrypt_aes_pw(self, plaintext, password):
         """Encrypt the plaintext with the given key. Make sure the key contains the required key size."""
         plaintext = self.encrypt_aes_pad(plaintext)
-        iv = Random.new().read(AES.block_size)
         salt = Random.new().read(16)
         key = self.encryption_key_from_password(salt, password, 32) # 256-bit key
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return iv + salt + cipher.encrypt(plaintext) # Add both iv and salt to the cipher text
+        return salt + self.encrypt_aes(plaintext, key)
 
     def decrypt_aes(self, ciphertext, key):
         """Decrypt the ciphertext using the key. Return the plaintext."""
@@ -317,12 +315,9 @@ class SecureNode (Node):
 
     def decrypt_aes_pw(self, ciphertext, password):
         """Decrypt the ciphertext using the key. Return the plaintext."""
-        iv = ciphertext[:AES.block_size]
-        salt = ciphertext[AES.block_size:AES.block_size+16] # Hardcoded 16 bits salt, maybe contant
+        salt = ciphertext[:16]
         key = self.encryption_key_from_password(salt, password, 32) # 256-bit key
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plaintext = cipher.decrypt(ciphertext[AES.block_size+16:])
-        return plaintext.rstrip(b"\0")
+        return self.decrypt_aes(ciphertext[16:], key)
 
     def encrypt_aes_file(self, file_name, plaintext, key):
         """Encrypt the plaintext and put it into a file with file_name."""
