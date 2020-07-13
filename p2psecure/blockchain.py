@@ -55,45 +55,56 @@ class Blockchain:
                        nonce TEXT, 
                        hash TEXT)""")
 
+    def check_block(self, block):
+        return True
+            
     def add_block(self, block):
         """This method adds a block to the blockchain. It checks whether the hashes are correct of the block
            and of the previous block before it is added."""
-        c = self.db.cursor()
-        c.execute("INSERT INTO blockchain (prev_hash, type, timestamp, data, nonce, hash) VALUES (?, ?, ?, ?, ?, ?)",
-                  ( block["prev_hash"],
-                    block["type"], 
-                    block["timestamp"],
-                    json.dumps(block["data"], sort_keys=True),
-                    block["nonce"],
-                    block["hash"] ))
-        self.db.commit()
+        if ( self.check_block(block) ):
+            c = self.db.cursor()
+            c.execute("INSERT INTO blockchain (prev_hash, type, timestamp, data, nonce, hash) VALUES (?, ?, ?, ?, ?, ?)",
+                      ( block["prev_hash"],
+                        block["type"], 
+                        block["timestamp"],
+                        json.dumps(block["data"], sort_keys=True),
+                        block["nonce"],
+                        block["hash"] ))
+            self.db.commit()
+            return True
+
+        return False
 
     def get_blockchain_record(self, data):
-        #(4, '0', 'transaction', '2020-07-12T21:53:22.549666', b'{"data": "MAurice Snoeren"}', '471497', '00000ce82c08eea5566b480fd00bb6d79bfd072a1dbabdeae345edd58554d254ebfce1776804ae862eec2c3726d4ae2b48845537fa64ddba79d5cde961686bd3')
-        return {
-            "id": int(data[0]),
-            "prev_hash": data[1],
-            "type": data[2],
-            "timestamp": data[3], # CONVERT to date => datetime.strptime(data[3], "%Y-%m-%dT%H:%M:%S.%f"),
-            "data": json.loads(data[4]),
-            "nonce": data[5],
-            "hash": data[6]
-        }
+        header = ("id", "prev_hash", "type", "timestamp", "data", "nonce", "hash")
+        
+        if ( len(data) != len(header) ):
+            print("Blockchain data does not contain " + len(header) + " elements")
+            return None
+
+        record = {}
+        for i in range(len(header)):
+            record[header[i]] = data[i]
+            
+        return record
         
     def get_block(self, index):
         """This method returns the block on the given index. When the index does not exist, None is returned."""
-        pass
-    
+        c = self.db.cursor()
+        c.execute("SELECT * FROM blockchain WHERE id=?", (index,))
+
+        data = c.fetchone()
+        if ( data != None ):
+            return self.get_blockchain_record(data)
+
+        return None
+            
     def get_last_block(self):
         """This method returns the last block of the blockchain."""
         c = self.db.cursor()
         for row in c.execute('SELECT * FROM blockchain ORDER BY id DESC LIMIT 1'):
             return self.get_blockchain_record(row)
         return None
-
-    def get_last_block_id(self):
-        """This method returns the last block of the blockchain."""
-        pass
 
     def process_block(self, data, type):
         """This method creates a new block to be inserted on the blockchain. It utilized proof-of-work or
@@ -112,7 +123,7 @@ class Blockchain:
             "nonce"    : 0
         }
 
-        # Implementation of proof-of-work
+        # Implementation of proof-of-work, like bitcoin PoW
         difficulty = 5
         h = hashlib.sha512()
         h.update( json.dumps(block, sort_keys=True).encode("utf-8") )
@@ -121,5 +132,5 @@ class Blockchain:
             h.update( json.dumps(block, sort_keys=True).encode("utf-8") )
 
         block["hash"] = h.hexdigest()
-        print(block)
+
         return block
